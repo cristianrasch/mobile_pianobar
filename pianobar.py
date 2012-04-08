@@ -1,16 +1,29 @@
 import subprocess
+import re
 
 class Wrapper(object):
-  available_cmds = ('+', '-', 'e', 'i', 'n', 'p', 't', '(', ')')
+  available_cmds = ('+', '-', 'n', 'p', '(', ')', 'help')
   void_cmds = ('p', '(', ')')
   
   def __init__(self):
     self.proc = subprocess.Popen('pianobar', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    self.regex = re.compile(r'\A\w')
   
-  def run(self):  
-    for i in range(6):
-      line = self.proc.stdout.readline()
-    return line.strip()
+  def sanitize(self, string):
+    if re.match(self.regex, string):
+      return string
+    else:
+      idx = string.find('|>')
+      if idx == -1:
+        idx = string.find('(i)')
+      return string[idx:]
+  
+  def read_from_pianobar(self, how_many = 1):
+    lines = [self.proc.stdout.readline().strip() for i in range(how_many)]
+    return map(self.sanitize, lines)
+  
+  def run(self):
+    return self.read_from_pianobar(6)
   
   def isvoid(self, cmd):
     return cmd in self.void_cmds
@@ -22,9 +35,11 @@ class Wrapper(object):
       else:
         cmd = command
         read = 0 if self.isvoid(cmd) else 1
+      
       self.proc.stdin.write(cmd)
+      
       if read:
-        res = [self.proc.stdout.readline().strip() for i in range(read)]
+        res = self.read_from_pianobar(read)
       else:
         res = ['Cmd executed: %s' % cmd]
     else:
