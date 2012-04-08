@@ -8,20 +8,32 @@ from socket import *
 class Client(object):
   host = '192.168.0.15'
   port = 12345
-  buf_size = 4096
-  addr = (host, port)
   
   def __init__(self):
     self.droid = android.Android()
-    self.tcpCliSock = socket(AF_INET, SOCK_STREAM)
-    self.tcpCliSock.connect(self.addr)
-    self.regex = re.compile(r'"(.+?)" by "(.+?)" on "(.+?)"')
+    self.ip_regex = re.compile(r'\A\d{1,3}\.d{1,3}\.d{1,3}\.d{1,3}\Z')
+    self.track_regex = re.compile(r'"(.+?)" by "(.+?)" on "(.+?)"')
   
   def __del__(self):
     self.tcpCliSock.close()
-    
+  
+  def welcome(self):
+    title = 'Welcome to Pianobar'
+    message = 'Remote control for Android'
+    self.droid.dialogCreateAlert(title, message)
+    self.droid.dialogSetPositiveButtonText('Continue')
+    self.droid.dialogShow()
+    # response = self.droid.dialogGetResponse().result
+    # print 'response:', response
+  
+  def config(self):
+    ip = self.droid.dialogGetInput('Server', 'IP address', self.host).result
+    self.serverip = ip if re.match(self.ip_regex, ip) else self.host
+    self.tcpCliSock = socket(AF_INET, SOCK_STREAM)
+    self.tcpCliSock.connect((self.serverip, self.port))
+  
   def parse(self, data):
-    match = re.search(self.regex, data)
+    match = re.search(self.track_regex, data)
     return match.groups() if match else data
     
   def read(self):
@@ -44,4 +56,5 @@ class Client(object):
 
 if __name__ == '__main__':
   client = Client()
+  client.config()
   client.run()
