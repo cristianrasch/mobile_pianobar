@@ -6,55 +6,49 @@ import types
 from socket import *
 
 class Client(object):
-  host = '192.168.0.15'
+  host = '172.16.32.87'
   port = 12345
   
   def __init__(self):
     self.droid = android.Android()
-    self.ip_regex = re.compile(r'\A\d{1,3}\.d{1,3}\.d{1,3}\.d{1,3}\Z')
+    self.ip_regex = re.compile(r'\A\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\Z')
     self.track_regex = re.compile(r'"(.+?)" by "(.+?)" on "(.+?)"')
+    self._config()
   
-  def __del__(self):
-    self.tcpCliSock.close()
+  def run(self):
+    self._read()
+    while True:
+      data = raw_input('> ')
+      # data = self.droid.dialogGetInput('pianobar', 'command').result
+      if not data: break
+      self.tcpCliSock.send(data)
+      self._read()
   
-  def welcome(self):
-    title = 'Welcome to Pianobar'
-    message = 'Remote control for Android'
-    self.droid.dialogCreateAlert(title, message)
-    self.droid.dialogSetPositiveButtonText('Continue')
-    self.droid.dialogShow()
-    # response = self.droid.dialogGetResponse().result
-    # print 'response:', response
-  
-  def config(self):
+  def _config(self):
     ip = self.droid.dialogGetInput('Server', 'IP address', self.host).result
     self.serverip = ip if re.match(self.ip_regex, ip) else self.host
     self.tcpCliSock = socket(AF_INET, SOCK_STREAM)
     self.tcpCliSock.connect((self.serverip, self.port))
   
-  def parse(self, data):
+  def _parse(self, data):
     match = re.search(self.track_regex, data)
     return match.groups() if match else data
     
-  def read(self):
+  def _read(self):
     how_many = int(self.tcpCliSock.recv(4))
     data = self.tcpCliSock.recv(how_many)
-    parsed_data = self.parse(data)
+    parsed_data = self._parse(data)
     if type(parsed_data) is types.TupleType:
       song, band, album = parsed_data
       self.droid.notify('Info', song+'\nby '+band+'\non '+album)
     else:
-      self.droid.notify('Alert', data)
+        self.droid.dialogCreateAlert('Info', parsed_data)
+        self.droid.dialogSetPositiveButtonText('Continue')
+        self.droid.dialogShow()
     
-  def run(self):
-    self.read()
-    while True:
-      data = raw_input('> ')
-      if not data: break
-      self.tcpCliSock.send(data)
-      self.read()
-
+  def __del__(self):
+    self.tcpCliSock.close()
+  
 if __name__ == '__main__':
   client = Client()
-  client.config()
   client.run()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from twisted.internet import protocol, reactor
 
-HOST = '192.168.0.15'
+HOST = 'localhost'
 PORT = 12345
 
 class TSClntProtocol(protocol.Protocol):
@@ -17,7 +17,7 @@ class TSClntProtocol(protocol.Protocol):
   #   self.sendData()
 
   def dataReceived(self, data):
-    print data
+    print data[4:]
     self.sendData()
 
 class TSClntFactory(protocol.ClientFactory):
@@ -25,6 +25,6 @@ class TSClntFactory(protocol.ClientFactory):
   clientConnectionLost = clientConnectionFailed = \
     lambda self, connector, reason: reactor.stop()
 
-reactor.connectTCP(HOST, PORT, TSClntFactory())
-reactor.run()
-
+if __name__ == '__main__':
+  reactor.connectTCP(HOST, PORT, TSClntFactory())
+  reactor.run()

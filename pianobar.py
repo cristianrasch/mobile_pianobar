@@ -1,55 +1,59 @@
-import subprocess
 import re
+import subprocess
+import tempfile
+import time
 
 class Wrapper(object):
-  available_cmds = ('+', '-', 'n', 'p', '(', ')', 'help')
-  void_cmds = ('p', '(', ')')
+  _available_cmds = ('+', '-', 'n', 'p', '(', ')', 'help')
+  _void_cmds = ('p', '(', ')')
   
   def __init__(self):
-    self.proc = subprocess.Popen('pianobar', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    self.regex = re.compile(r'\A\w')
-  
-  def sanitize(self, string):
-    if re.match(self.regex, string):
-      return string
-    else:
-      idx = string.find('|>')
-      if idx == -1:
-        idx = string.find('(i)')
-      return string[idx:]
-  
-  def read_from_pianobar(self, how_many = 1):
-    lines = [self.proc.stdout.readline().strip() for i in range(how_many)]
-    return map(self.sanitize, lines)
-  
+    self.starts_with_a_cap_letter_regex = re.compile(r'\A[A-Z]')
+    self.sanitize_regex = re.compile(r'[\s|"]\w')
+    self.buffer = tempfile.TemporaryFile('r+', prefix='pianobar', suffix='.log')
+    self.pos = 0
+    self.proc = subprocess.Popen('pianobar', stdin=subprocess.PIPE, stdout=self.buffer)
+    time.sleep(10)
+    
   def run(self):
-    return self.read_from_pianobar(6)
-  
-  def isvoid(self, cmd):
-    return cmd in self.void_cmds
+    return self._read_from_pianobar()
   
   def execute(self, command):
-    if command in self.available_cmds:
-      if command == 'help':
-        cmd, read = '?', 23
-      else:
-        cmd = command
-        read = 0 if self.isvoid(cmd) else 1
-      
+    if True: #command in self._available_cmds or command.isdigit():
+      cmd = command+'\n' if command.isdigit() else command
       self.proc.stdin.write(cmd)
       
-      if read:
-        res = self.read_from_pianobar(read)
+      if self._isvoid(command):
+        res = ['Cmd executed: %s' % command]
       else:
-        res = ['Cmd executed: %s' % cmd]
+        time.sleep(3)
+        res = self._read_from_pianobar()
     else:
       res = ['Command not found. Available commands:', str(self.available_cmds)]
     
     return res
-
+    
+  def _sanitize(self, string):
+    if re.match(self.starts_with_a_cap_letter_regex, string):
+      return string.strip()
+    else:
+      match = re.search(self.sanitize_regex, string)
+      if match: return string[match.start():].strip()
+  
+  def _read_from_pianobar(self):
+    self.buffer.seek(self.pos)
+    lines = self.buffer.readlines()
+    self.pos = self.buffer.tell()
+    sanitized_lines = map(self._sanitize, lines)
+    return filter(lambda x: x, sanitized_lines)
+    
+  def _isvoid(self, cmd):
+    return cmd in self._void_cmds
+  
   def __del__(self):
     self.proc.stdin.write('q')
-    self.proc.wait()
+    # self.proc.wait()
+    self.buffer.close()
 
 #	+    love song
 #	-    ban song
