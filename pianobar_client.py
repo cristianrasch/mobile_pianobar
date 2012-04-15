@@ -6,7 +6,7 @@ import types
 from socket import *
 
 class Client(object):
-  host = '172.16.32.87'
+  host = '192.168.0.15'
   port = 12345
   
   def __init__(self):
@@ -16,7 +16,6 @@ class Client(object):
     self._config()
   
   def run(self):
-    self._read()
     while True:
       data = raw_input('> ')
       # data = self.droid.dialogGetInput('pianobar', 'command').result

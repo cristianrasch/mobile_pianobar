@@ -8,11 +8,15 @@ from pianobar import Wrapper
 PORT = 12345
 
 class TSServProtocol(protocol.Protocol):
+  pianobar = Wrapper()
+  init = False
+  
   def connectionMade(self):
     self.clnt = self.transport.getPeer().host
     print '...connected from:', self.clnt
-    self.pianobar = Wrapper()
-    self._sendReponse(self.pianobar.run())
+    if not self.init:
+      self._sendReponse(self.pianobar.run())
+      self.init = True
   
   def dataReceived(self, data):
     response = self.pianobar.execute(data)

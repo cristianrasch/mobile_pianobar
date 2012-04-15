@@ -4,7 +4,7 @@ import tempfile
 import time
 
 class Wrapper(object):
-  _available_cmds = ('+', '-', 'n', 'p', '(', ')', 'help')
+  _available_cmds = ('+', '-', 'n', 'p', '(', ')', '?', 'e', 'u', 'h', 'i', 't')
   _void_cmds = ('p', '(', ')')
   
   def __init__(self):
@@ -19,7 +19,7 @@ class Wrapper(object):
     return self._read_from_pianobar()
   
   def execute(self, command):
-    if True: #command in self._available_cmds or command.isdigit():
+    if command in self._available_cmds or command.isdigit():
       cmd = command+'\n' if command.isdigit() else command
       self.proc.stdin.write(cmd)
       
